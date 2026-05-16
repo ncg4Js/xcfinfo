@@ -54,7 +54,7 @@ PUBLIC FUNCTION inspect_app(
     DEFINE i        INTEGER         # loop counter
 
     -- Apply defaults for unspecified options
-    IF protocol IS NULL THEN LET protocol = "http"      END IF
+    IF protocol IS NULL THEN LET protocol = "https"     END IF
     IF host     IS NULL THEN LET host     = "localhost" END IF
     IF show_env IS NULL THEN LET show_env = TRUE        END IF
     IF verbose  IS NULL THEN LET verbose  = FALSE       END IF

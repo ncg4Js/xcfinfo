@@ -24,7 +24,7 @@
 <tr>
 <td class="summary-text" width="25%">public</td>
 <td class="summary-text">
-<b><a href="#t_app_config">t_app_config</a></b> RECORD<br> t_app_config — complete parsed state of a Genero application XCF file.
+<b><a href="#t_app_config">t_app_config</a></b> RECORD<br> Complete parsed state of a Genero application XCF file.
    id       — application name derived from the XCF filename (without .xcf extension)
    parent   — parent application identifier from the Parent XML attribute
    path     — execution path from the PATH node in the EXECUTION section
@@ -34,7 +34,7 @@
 <tr>
 <td class="summary-text" width="25%">public</td>
 <td class="summary-text">
-<b><a href="#t_env_var">t_env_var</a></b> RECORD<br> t_env_var — a single environment variable entry from an EXECUTION component.
+<b><a href="#t_env_var">t_env_var</a></b> RECORD<br> A single environment variable entry from an EXECUTION component.
    id     — environment variable name
    value  — variable value; may contain $(token) references
    concat — merge rule when app overrides GAS value: APPEND, PREPEND, or empty (replace)</td>
@@ -42,12 +42,12 @@
 <tr>
 <td class="summary-text" width="25%">public</td>
 <td class="summary-text">
-<b><a href="#t_env_var_list">t_env_var_list</a></b> DYNAMIC ARRAY OF  <a href="#t_env_var">t_env_var</a><br> t_env_var_list — dynamic array of t_env_var; used for both GAS execution component and app-level env var lists.</td>
+<b><a href="#t_env_var_list">t_env_var_list</a></b> DYNAMIC ARRAY OF  <a href="#t_env_var">t_env_var</a><br> Dynamic array of t_env_var; used for both GAS execution component and app-level env var lists.</td>
 </tr>
 <tr>
 <td class="summary-text" width="25%">public</td>
 <td class="summary-text">
-<b><a href="#t_gas_config">t_gas_config</a></b> RECORD<br> t_gas_config — complete parsed state of the GAS server configuration (as.xcf).
+<b><a href="#t_gas_config">t_gas_config</a></b> RECORD<br> Complete parsed state of the GAS server configuration (as.xcf).
    resources   — all resources parsed from the RESOURCE_LIST
    exec_env    — env vars from the cpn.wa.execution.local execution component
    groups      — group-to-path mappings from APPLICATION_LIST, SERVICE_LIST, and group XML files
@@ -56,7 +56,7 @@
 <tr>
 <td class="summary-text" width="25%">public</td>
 <td class="summary-text">
-<b><a href="#t_group">t_group</a></b> RECORD<br> t_group — a group mapping entry from APPLICATION_LIST, SERVICE_LIST, or a group XML file.
+<b><a href="#t_group">t_group</a></b> RECORD<br> A group mapping entry from APPLICATION_LIST, SERVICE_LIST, or a group XML file.
    id         — group identifier used in the browser URL path (e.g. "dev")
    path       — filesystem directory the group maps to
    group_type — routing type: "ua" for interactive applications, "ws" for web services</td>
@@ -64,7 +64,7 @@
 <tr>
 <td class="summary-text" width="25%">public</td>
 <td class="summary-text">
-<b><a href="#t_group_list">t_group_list</a></b> DYNAMIC ARRAY OF  <a href="#t_group">t_group</a><br> t_group_list — dynamic array of t_group; accumulates all group mappings from all sources.</td>
+<b><a href="#t_group_list">t_group_list</a></b> DYNAMIC ARRAY OF  <a href="#t_group">t_group</a><br> Dynamic array of t_group; accumulates all group mappings from all sources.</td>
 </tr>
 <tr>
 <td class="summary-text" width="25%">public</td>
@@ -74,7 +74,7 @@
 <tr>
 <td class="summary-text" width="25%">public</td>
 <td class="summary-text">
-<b><a href="#t_resource_list">t_resource_list</a></b> DYNAMIC ARRAY OF  <a href="#t_resource">t_resource</a><br> t_resource_list — dynamic array of t_resource; holds all resources parsed from the RESOURCE_LIST in as.xcf.</td>
+<b><a href="#t_resource_list">t_resource_list</a></b> DYNAMIC ARRAY OF  <a href="#t_resource">t_resource</a><br> Dynamic array of t_resource; holds all resources parsed from the RESOURCE_LIST in as.xcf.</td>
 </tr>
 </table>
 <br><h2>Types</h2>
@@ -90,7 +90,7 @@
 </td></tr>
 </table></td>
 </tr></table> END RECORD</tt><dl>
-<dd><p> t_app_config — complete parsed state of a Genero application XCF file.
+<dd><p> Complete parsed state of a Genero application XCF file.
    id       — application name derived from the XCF filename (without .xcf extension)
    parent   — parent application identifier from the Parent XML attribute
    path     — execution path from the PATH node in the EXECUTION section
@@ -108,7 +108,7 @@
 <tr><td>concat STRING</td></tr>
 </table></td>
 </tr></table> END RECORD</tt><dl>
-<dd><p> t_env_var — a single environment variable entry from an EXECUTION component.
+<dd><p> A single environment variable entry from an EXECUTION component.
    id     — environment variable name
    value  — variable value; may contain $(token) references
    concat — merge rule when app overrides GAS value: APPEND, PREPEND, or empty (replace)</p></dd>
@@ -117,7 +117,7 @@
 <hr>
 <a id="t_env_var_list"> </a><h3>t_env_var_list</h3>
 <tt>public TYPE <b>t_env_var_list</b> DYNAMIC ARRAY OF  <a href="#t_env_var">t_env_var</a></tt><dl>
-<dd><p> t_env_var_list — dynamic array of t_env_var; used for both GAS execution component and app-level env var lists.</p></dd>
+<dd><p> Dynamic array of t_env_var; used for both GAS execution component and app-level env var lists.</p></dd>
 <dd><dl></dl></dd>
 </dl>
 <hr>
@@ -134,7 +134,7 @@
 <tr><td>server_port STRING</td></tr>
 </table></td>
 </tr></table> END RECORD</tt><dl>
-<dd><p> t_gas_config — complete parsed state of the GAS server configuration (as.xcf).
+<dd><p> Complete parsed state of the GAS server configuration (as.xcf).
    resources   — all resources parsed from the RESOURCE_LIST
    exec_env    — env vars from the cpn.wa.execution.local execution component
    groups      — group-to-path mappings from APPLICATION_LIST, SERVICE_LIST, and group XML files
@@ -151,7 +151,7 @@
 <tr><td>group_type STRING</td></tr>
 </table></td>
 </tr></table> END RECORD</tt><dl>
-<dd><p> t_group — a group mapping entry from APPLICATION_LIST, SERVICE_LIST, or a group XML file.
+<dd><p> A group mapping entry from APPLICATION_LIST, SERVICE_LIST, or a group XML file.
    id         — group identifier used in the browser URL path (e.g. "dev")
    path       — filesystem directory the group maps to
    group_type — routing type: "ua" for interactive applications, "ws" for web services</p></dd>
@@ -160,7 +160,7 @@
 <hr>
 <a id="t_group_list"> </a><h3>t_group_list</h3>
 <tt>public TYPE <b>t_group_list</b> DYNAMIC ARRAY OF  <a href="#t_group">t_group</a></tt><dl>
-<dd><p> t_group_list — dynamic array of t_group; accumulates all group mappings from all sources.</p></dd>
+<dd><p> Dynamic array of t_group; accumulates all group mappings from all sources.</p></dd>
 <dd><dl></dl></dd>
 </dl>
 <hr>
@@ -177,7 +177,7 @@
 <p> Type definitions shared by xcfinfo modules.</p>
 <p> Defines the record structures and array types used to hold parsed GAS server
  configuration (as.xcf) and Genero application XCF data.
- t_resource — a single resource entry from the GAS RESOURCE_LIST.
+ A single resource entry from the GAS RESOURCE_LIST.
    id     — resource identifier (e.g. "res.ic.server.port")
    source — origin type: INTERNAL, ENVIRON, UNX, or PLATFORM_INDEPENDENT
    value  — resource value; may contain $(token) references resolved by expand_refs()</p>
@@ -187,7 +187,7 @@
 <hr>
 <a id="t_resource_list"> </a><h3>t_resource_list</h3>
 <tt>public TYPE <b>t_resource_list</b> DYNAMIC ARRAY OF  <a href="#t_resource">t_resource</a></tt><dl>
-<dd><p> t_resource_list — dynamic array of t_resource; holds all resources parsed from the RESOURCE_LIST in as.xcf.</p></dd>
+<dd><p> Dynamic array of t_resource; holds all resources parsed from the RESOURCE_LIST in as.xcf.</p></dd>
 <dd><dl></dl></dd>
 </dl>
 <hr>
