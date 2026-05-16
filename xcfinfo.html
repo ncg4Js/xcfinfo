@@ -14,7 +14,7 @@
 <td><a href="#top" target="_top">No Frames</a></td>
 <td><a href="../index.html" target="_top">Frames</a></td>
 <td>Prev</td>
-<td><a href="xcftypes.html">Next</a></td>
+<td><a href="xcfinfo_lib.html">Next</a></td>
 </tr></table>
 <br><small>Summary: <a href="#function_summary">FUNCTION</a></small><hr>
 <b>xcfinfo</b><h1>xcfinfo</h1>
@@ -24,332 +24,42 @@
 <tr>
 <td class="summary-text" width="25%">public</td>
 <td class="summary-text">
-<b><a href="#build_url">build_url</a></b>(xcf_file STRING, protocol STRING, host STRING, port_override STRING) RETURNS STRING<br> Build the GAS browser URL for the application.
- URL format: protocol://host:port/genero/ua|ws/r/group/appname.
- "genero" is the Apache ProxyPass alias that forwards browser requests to the
- FastCGI dispatcher; it is not configurable from within GAS itself.
- The group is resolved by matching m_app.path against m_gas.groups, walking up
- the directory tree until a match is found or the path is exhausted.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#collect_env_vars">collect_env_vars</a></b>() RETURNS <a href="xcftypes.html#t_env_var_list">xcftypes.t_env_var_list</a><br> Return the merged DVM environment variable list ready for display.
- Starts from the GAS execution component variables, then applies app-level overrides
- using APPEND, PREPEND, or replace semantics according to each entry's Concat attribute.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#expand_refs">expand_refs</a></b>(s STRING) RETURNS STRING<br> Expand all $(name) resource-reference tokens in s (maximum 50 substitutions per call).
- Each $(name) token is replaced by the value returned by find_resource_value().
- Iterates to handle chained references; the 50-iteration limit prevents infinite
- loops on circular resource definitions.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#extract_flag_value">extract_flag_value</a></b>(line STRING, flag STRING) RETURNS STRING<br> Return the value of a named command-line flag from a process command-line string.
- Uses a sentinel prefix so that flags appearing at position 1 of the string are found.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#find_child_elem">find_child_elem</a></b>(parent xml.DomNode, tag STRING) RETURNS xml.DomNode<br> Return the first child element node whose tag name matches tag, or NULL.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#find_resource_value">find_resource_value</a></b>(id STRING) RETURNS STRING<br> Return the resolved value for a resource id.
- Searches m_gas.resources first; falls back to fgl_getenv() if not found.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#get_text">get_text</a></b>(node xml.DomNode) RETURNS STRING<br> Return the trimmed text content of a DOM element node.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#load_dispatcher_groups">load_dispatcher_groups</a></b>()<br> Query the running fastcgidispatch process for its group file arguments.
- Reads --application-group and --service-group from the process command line
- via ps (Unix) or wmic (Windows), then loads the found files via parse_group_file().</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#main">main</a></b>()<br>
-</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#parse_app_xcf">parse_app_xcf</a></b>(filename STRING)<br> Parse the Genero application XCF file into m_app.
- Reads the application id, parent, execution path, module, and env var overrides.
- Also registers application.path as a resource so $(application.path) can be expanded.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#parse_as_xcf">parse_as_xcf</a></b>(filename STRING)<br> Parse the GAS server configuration file (as.xcf) into m_gas.
- Loads resources (PLATFORM_INDEPENDENT then UNX), execution component env vars,
- APPLICATION_LIST and SERVICE_LIST group-to-path mappings, and the TCP server port.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#parse_env_nodes">parse_env_nodes</a></b>(container xml.DomNode, list <a href="xcftypes.html#t_env_var_list">xcftypes.t_env_var_list</a>) RETURNS <a href="xcftypes.html#t_env_var_list">xcftypes.t_env_var_list</a><br> Parse all ENVIRONMENT_VARIABLE child elements of container and append them to list.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#parse_group_file">parse_group_file</a></b>(filename STRING, group_type STRING)<br> Parse an APPLICATION_GROUPS or SERVICE_GROUPS XML file and append entries to m_gas.groups.
- Pass NULL for group_type to auto-detect the type from the root element name.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#parse_resource_nodes">parse_resource_nodes</a></b>(container xml.DomNode)<br> Parse all RESOURCE child elements of container and load them into m_gas.resources.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#resolve_resources">resolve_resources</a></b>()<br> Resolve all $(resource) tokens across all parsed configuration data.
- Applies 10-pass chain resolution to m_gas.resources, then expands tokens in
- m_gas.exec_env, m_app.env_vars, m_gas.groups paths, m_app.path, and m_gas.server_port.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#upsert_resource">upsert_resource</a></b>(id STRING, source STRING, value STRING)<br> Add or update a resource entry in m_gas.resources.
- If an entry with the same id already exists it is updated in place; UNX-sourced
- entries therefore override PLATFORM_INDEPENDENT entries when loaded second.</td>
-</tr>
-<tr>
-<td class="summary-text" width="25%">public</td>
-<td class="summary-text">
-<b><a href="#xcf_app_name">xcf_app_name</a></b>(path STRING) RETURNS STRING<br> Return the GAS application name derived from an XCF file path.
- Strips the directory component and the .xcf extension from the path.</td>
+<b><a href="#main">main</a></b>()<br> xcfinfo — Genero Application Server configuration inspector.</td>
 </tr>
 </table>
 <br><h2>Functions</h2>
-<h3><a id="build_url">build_url</a></h3>
-<tt>public FUNCTION <b>build_url</b>(xcf_file STRING, protocol STRING, host STRING, port_override STRING) RETURNS STRING</tt><dl>
-<dd><p> Build the GAS browser URL for the application.
- URL format: protocol://host:port/genero/ua|ws/r/group/appname.
- "genero" is the Apache ProxyPass alias that forwards browser requests to the
- FastCGI dispatcher; it is not configurable from within GAS itself.
- The group is resolved by matching m_app.path against m_gas.groups, walking up
- the directory tree until a match is found or the path is exhausted.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>xcf_file</code> - Path to the application XCF file (provides the app name).<br><code>protocol</code> - URL protocol: "http" or "https".<br><code>host</code> - Server hostname or IP address for the URL.<br><code>port_override</code> - Port to use; NULL to read the port from as.xcf.<br>
-</dd>
-<dt><b>Returns:</b></dt>
-<dd>The fully composed GAS browser URL string.<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="collect_env_vars">collect_env_vars</a></h3>
-<tt>public FUNCTION <b>collect_env_vars</b>() RETURNS <a href="xcftypes.html#t_env_var_list">xcftypes.t_env_var_list</a></tt><dl>
-<dd><p> Return the merged DVM environment variable list ready for display.
- Starts from the GAS execution component variables, then applies app-level overrides
- using APPEND, PREPEND, or replace semantics according to each entry's Concat attribute.</p></dd>
-<dd><dl>
-<dt><b>Returns:</b></dt>
-<dd>The merged t_env_var_list with all app-level overrides applied.<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="expand_refs">expand_refs</a></h3>
-<tt>public FUNCTION <b>expand_refs</b>(s STRING) RETURNS STRING</tt><dl>
-<dd><p> Expand all $(name) resource-reference tokens in s (maximum 50 substitutions per call).
- Each $(name) token is replaced by the value returned by find_resource_value().
- Iterates to handle chained references; the 50-iteration limit prevents infinite
- loops on circular resource definitions.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>s</code> - The string that may contain $(resource.name) tokens.<br>
-</dd>
-<dt><b>Returns:</b></dt>
-<dd>The string with all resolvable tokens substituted by their values.<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="extract_flag_value">extract_flag_value</a></h3>
-<tt>public FUNCTION <b>extract_flag_value</b>(line STRING, flag STRING) RETURNS STRING</tt><dl>
-<dd><p> Return the value of a named command-line flag from a process command-line string.
- Uses a sentinel prefix so that flags appearing at position 1 of the string are found.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>line</code> - The full command-line string to search.<br><code>flag</code> - The flag name to locate (e.g. "--application-group").<br>
-</dd>
-<dt><b>Returns:</b></dt>
-<dd>The token immediately following the flag, or NULL if the flag is absent.<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="find_child_elem">find_child_elem</a></h3>
-<tt>public FUNCTION <b>find_child_elem</b>(parent xml.DomNode, tag STRING) RETURNS xml.DomNode</tt><dl>
-<dd><p> Return the first child element node whose tag name matches tag, or NULL.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>parent</code> - The parent DOM node to search.<br><code>tag</code> - The element tag name to match.<br>
-</dd>
-<dt><b>Returns:</b></dt>
-<dd>The first matching child element, or NULL if none found.<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="find_resource_value">find_resource_value</a></h3>
-<tt>public FUNCTION <b>find_resource_value</b>(id STRING) RETURNS STRING</tt><dl>
-<dd><p> Return the resolved value for a resource id.
- Searches m_gas.resources first; falls back to fgl_getenv() if not found.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>id</code> - The resource identifier to look up.<br>
-</dd>
-<dt><b>Returns:</b></dt>
-<dd>The resource value string, or the environment variable value if absent.<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="get_text">get_text</a></h3>
-<tt>public FUNCTION <b>get_text</b>(node xml.DomNode) RETURNS STRING</tt><dl>
-<dd><p> Return the trimmed text content of a DOM element node.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>node</code> - The DOM element node whose text content is wanted.<br>
-</dd>
-<dt><b>Returns:</b></dt>
-<dd>The trimmed text, or an empty string if no TEXT_NODE child exists.<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="load_dispatcher_groups">load_dispatcher_groups</a></h3>
-<tt>public FUNCTION <b>load_dispatcher_groups</b>()</tt><dl>
-<dd><p> Query the running fastcgidispatch process for its group file arguments.
- Reads --application-group and --service-group from the process command line
- via ps (Unix) or wmic (Windows), then loads the found files via parse_group_file().</p></dd>
-<dd><dl></dl></dd>
-</dl>
-<hr>
 <h3><a id="main">main</a></h3>
 <tt>public FUNCTION <b>main</b>()</tt><dl>
-<dd></dd>
+<dd>
+<p> xcfinfo — Genero Application Server configuration inspector.</p>
+<p> Reads the GAS server configuration (as.xcf) and a Genero application XCF file
+ to compute and display the browser URL for launching the application through the
+ GAS dispatcher, and the DVM environment variable set that the execution component
+ will inject at runtime.</p>
+<p> Usage:
+   fglrun xcfinfo &lt;app.xcf&gt; [options]</p>
+<p> Required:
+   &lt;app.xcf&gt;           Path to the Genero application XCF file.</p>
+<p> Options:
+   --url &lt;host&gt;        Override the hostname in the browser URL (default: localhost).</p>
+<p>   --no-env            Suppress the environment variable output.</p>
+<p>   --ua-groups &lt;file&gt;  Use this APPLICATION_GROUPS XML file to resolve the
+                       application group and URL path instead of querying the
+                       running dispatcher. Mutually exclusive with --ws-groups.</p>
+<p>   --ws-groups &lt;file&gt;  Use this SERVICE_GROUPS XML file to resolve the
+                       service group and URL path instead of querying the
+                       running dispatcher. Mutually exclusive with --ua-groups.</p>
+<p>   --as-config &lt;file&gt;  Use this file as the GAS server configuration instead
+                       of the default $FGLASDIR/etc/as.xcf. Useful when
+                       inspecting a non-active GAS installation or a staging
+                       configuration file.</p>
+<p>   --http              Use http:// in the browser URL (default).
+   --https             Use https:// in the browser URL.</p>
+<p>   --port &lt;port&gt;       Override the port in the browser URL (default: from as.xcf).</p>
+<p>   --verbose           Print diagnostic information about each processing step.
+ Entry point: parse command-line arguments and delegate processing to xcfinfo_lib.run().</p>
+</dd>
 <dd><dl></dl></dd>
-</dl>
-<hr>
-<h3><a id="parse_app_xcf">parse_app_xcf</a></h3>
-<tt>public FUNCTION <b>parse_app_xcf</b>(filename STRING)</tt><dl>
-<dd><p> Parse the Genero application XCF file into m_app.
- Reads the application id, parent, execution path, module, and env var overrides.
- Also registers application.path as a resource so $(application.path) can be expanded.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>filename</code> - Path to the application XCF file.<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="parse_as_xcf">parse_as_xcf</a></h3>
-<tt>public FUNCTION <b>parse_as_xcf</b>(filename STRING)</tt><dl>
-<dd><p> Parse the GAS server configuration file (as.xcf) into m_gas.
- Loads resources (PLATFORM_INDEPENDENT then UNX), execution component env vars,
- APPLICATION_LIST and SERVICE_LIST group-to-path mappings, and the TCP server port.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>filename</code> - Path to the as.xcf configuration file.<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="parse_env_nodes">parse_env_nodes</a></h3>
-<tt>public FUNCTION <b>parse_env_nodes</b>(container xml.DomNode, list <a href="xcftypes.html#t_env_var_list">xcftypes.t_env_var_list</a>) RETURNS <a href="xcftypes.html#t_env_var_list">xcftypes.t_env_var_list</a></tt><dl>
-<dd><p> Parse all ENVIRONMENT_VARIABLE child elements of container and append them to list.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>container</code> - The parent DOM node containing ENVIRONMENT_VARIABLE elements.<br><code>list</code> - The t_env_var_list to append the parsed entries to.<br>
-</dd>
-<dt><b>Returns:</b></dt>
-<dd>The updated list with all newly parsed entries appended.<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="parse_group_file">parse_group_file</a></h3>
-<tt>public FUNCTION <b>parse_group_file</b>(filename STRING, group_type STRING)</tt><dl>
-<dd><p> Parse an APPLICATION_GROUPS or SERVICE_GROUPS XML file and append entries to m_gas.groups.
- Pass NULL for group_type to auto-detect the type from the root element name.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>filename</code> - Path to the groups XML file.<br><code>group_type</code> - "ua" for APPLICATION_GROUPS, "ws" for SERVICE_GROUPS, NULL to auto-detect.<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="parse_resource_nodes">parse_resource_nodes</a></h3>
-<tt>public FUNCTION <b>parse_resource_nodes</b>(container xml.DomNode)</tt><dl>
-<dd><p> Parse all RESOURCE child elements of container and load them into m_gas.resources.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>container</code> - The parent DOM node (PLATFORM_INDEPENDENT or UNX section).<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="resolve_resources">resolve_resources</a></h3>
-<tt>public FUNCTION <b>resolve_resources</b>()</tt><dl>
-<dd><p> Resolve all $(resource) tokens across all parsed configuration data.
- Applies 10-pass chain resolution to m_gas.resources, then expands tokens in
- m_gas.exec_env, m_app.env_vars, m_gas.groups paths, m_app.path, and m_gas.server_port.</p></dd>
-<dd><dl></dl></dd>
-</dl>
-<hr>
-<h3><a id="upsert_resource">upsert_resource</a></h3>
-<tt>public FUNCTION <b>upsert_resource</b>(id STRING, source STRING, value STRING)</tt><dl>
-<dd><p> Add or update a resource entry in m_gas.resources.
- If an entry with the same id already exists it is updated in place; UNX-sourced
- entries therefore override PLATFORM_INDEPENDENT entries when loaded second.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>id</code> - The resource identifier (e.g. "res.ic.server.port").<br><code>source</code> - The source attribute value (INTERNAL, ENVIRON, UNX, etc.).<br><code>value</code> - The resource value string, possibly containing $(token) references.<br>
-</dd>
-</dl></dd>
-</dl>
-<hr>
-<h3><a id="xcf_app_name">xcf_app_name</a></h3>
-<tt>public FUNCTION <b>xcf_app_name</b>(path STRING) RETURNS STRING</tt><dl>
-<dd><p> Return the GAS application name derived from an XCF file path.
- Strips the directory component and the .xcf extension from the path.</p></dd>
-<dd><dl>
-<dt><b>Parameters:</b></dt>
-<dd>
-<code>path</code> - Full or relative path to the XCF file.<br>
-</dd>
-<dt><b>Returns:</b></dt>
-<dd>The base filename without the .xcf extension.<br>
-</dd>
-</dl></dd>
 </dl>
 <table BORDER="0" CELLPADDING="0" CELLSPACING="3" SUMMARY=""><tr>
 <td><a href="../overview-summary.html">Overview</a></td>
@@ -359,7 +69,7 @@
 <td><a href="#top" target="_top">No Frames</a></td>
 <td><a href="../index.html" target="_top">Frames</a></td>
 <td>Prev</td>
-<td><a href="xcftypes.html">Next</a></td>
+<td><a href="xcfinfo_lib.html">Next</a></td>
 </tr></table></span>
 </body>
 </html>

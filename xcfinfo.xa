@@ -1,116 +1,32 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<api_class name="xcfinfo" package="xcfinfo" top="../" next="xcftypes">
-  <function order_name=".main" name="main" modifier="public"/>
-  <function order_name=".get_text" name="get_text" modifier="public">
-    <api_synopsis> Return the trimmed text content of a DOM element node.</api_synopsis>
-    <return>The trimmed text, or an empty string if no TEXT_NODE child exists.</return>
-    <api_param name="node" type="xml.DomNode">The DOM element node whose text content is wanted.</api_param>
-    <RETURNS type="STRING"/>
-  </function>
-  <function order_name=".find_child_elem" name="find_child_elem" modifier="public">
-    <api_synopsis> Return the first child element node whose tag name matches tag, or NULL.</api_synopsis>
-    <return>The first matching child element, or NULL if none found.</return>
-    <api_param name="parent" type="xml.DomNode">The parent DOM node to search.</api_param>
-    <api_param name="tag" type="STRING">The element tag name to match.</api_param>
-    <RETURNS type="xml.DomNode"/>
-  </function>
-  <function order_name=".upsert_resource" name="upsert_resource" modifier="public">
-    <api_synopsis> Add or update a resource entry in m_gas.resources.
- If an entry with the same id already exists it is updated in place; UNX-sourced
- entries therefore override PLATFORM_INDEPENDENT entries when loaded second.</api_synopsis>
-    <api_param name="id" type="STRING">The resource identifier (e.g. "res.ic.server.port").</api_param>
-    <api_param name="source" type="STRING">The source attribute value (INTERNAL, ENVIRON, UNX, etc.).</api_param>
-    <api_param name="value" type="STRING">The resource value string, possibly containing $(token) references.</api_param>
-  </function>
-  <function order_name=".parse_resource_nodes" name="parse_resource_nodes" modifier="public">
-    <api_synopsis> Parse all RESOURCE child elements of container and load them into m_gas.resources.</api_synopsis>
-    <api_param name="container" type="xml.DomNode">The parent DOM node (PLATFORM_INDEPENDENT or UNX section).</api_param>
-  </function>
-  <function order_name=".parse_env_nodes" name="parse_env_nodes" modifier="public">
-    <api_synopsis> Parse all ENVIRONMENT_VARIABLE child elements of container and append them to list.</api_synopsis>
-    <return>The updated list with all newly parsed entries appended.</return>
-    <api_param name="container" type="xml.DomNode">The parent DOM node containing ENVIRONMENT_VARIABLE elements.</api_param>
-    <api_param name="list" type="xcftypes.t_env_var_list" type_name="t_env_var_list" type_module="xcftypes">The t_env_var_list to append the parsed entries to.</api_param>
-    <RETURNS type="xcftypes.t_env_var_list" type_name="t_env_var_list" type_module="xcftypes"/>
-  </function>
-  <function order_name=".parse_as_xcf" name="parse_as_xcf" modifier="public">
-    <api_synopsis> Parse the GAS server configuration file (as.xcf) into m_gas.
- Loads resources (PLATFORM_INDEPENDENT then UNX), execution component env vars,
- APPLICATION_LIST and SERVICE_LIST group-to-path mappings, and the TCP server port.</api_synopsis>
-    <api_param name="filename" type="STRING">Path to the as.xcf configuration file.</api_param>
-  </function>
-  <function order_name=".parse_app_xcf" name="parse_app_xcf" modifier="public">
-    <api_synopsis> Parse the Genero application XCF file into m_app.
- Reads the application id, parent, execution path, module, and env var overrides.
- Also registers application.path as a resource so $(application.path) can be expanded.</api_synopsis>
-    <api_param name="filename" type="STRING">Path to the application XCF file.</api_param>
-  </function>
-  <function order_name=".find_resource_value" name="find_resource_value" modifier="public">
-    <api_synopsis> Return the resolved value for a resource id.
- Searches m_gas.resources first; falls back to fgl_getenv() if not found.</api_synopsis>
-    <return>The resource value string, or the environment variable value if absent.</return>
-    <api_param name="id" type="STRING">The resource identifier to look up.</api_param>
-    <RETURNS type="STRING"/>
-  </function>
-  <function order_name=".expand_refs" name="expand_refs" modifier="public">
-    <api_synopsis> Expand all $(name) resource-reference tokens in s (maximum 50 substitutions per call).
- Each $(name) token is replaced by the value returned by find_resource_value().
- Iterates to handle chained references; the 50-iteration limit prevents infinite
- loops on circular resource definitions.</api_synopsis>
-    <return>The string with all resolvable tokens substituted by their values.</return>
-    <api_param name="s" type="STRING">The string that may contain $(resource.name) tokens.</api_param>
-    <RETURNS type="STRING"/>
-  </function>
-  <function order_name=".resolve_resources" name="resolve_resources" modifier="public">
-    <api_synopsis> Resolve all $(resource) tokens across all parsed configuration data.
- Applies 10-pass chain resolution to m_gas.resources, then expands tokens in
- m_gas.exec_env, m_app.env_vars, m_gas.groups paths, m_app.path, and m_gas.server_port.</api_synopsis>
-  </function>
-  <function order_name=".collect_env_vars" name="collect_env_vars" modifier="public">
-    <api_synopsis> Return the merged DVM environment variable list ready for display.
- Starts from the GAS execution component variables, then applies app-level overrides
- using APPEND, PREPEND, or replace semantics according to each entry's Concat attribute.</api_synopsis>
-    <return>The merged t_env_var_list with all app-level overrides applied.</return>
-    <RETURNS type="xcftypes.t_env_var_list" type_name="t_env_var_list" type_module="xcftypes"/>
-  </function>
-  <function order_name=".parse_group_file" name="parse_group_file" modifier="public">
-    <api_synopsis> Parse an APPLICATION_GROUPS or SERVICE_GROUPS XML file and append entries to m_gas.groups.
- Pass NULL for group_type to auto-detect the type from the root element name.</api_synopsis>
-    <api_param name="filename" type="STRING">Path to the groups XML file.</api_param>
-    <api_param name="group_type" type="STRING">"ua" for APPLICATION_GROUPS, "ws" for SERVICE_GROUPS, NULL to auto-detect.</api_param>
-  </function>
-  <function order_name=".extract_flag_value" name="extract_flag_value" modifier="public">
-    <api_synopsis> Return the value of a named command-line flag from a process command-line string.
- Uses a sentinel prefix so that flags appearing at position 1 of the string are found.</api_synopsis>
-    <return>The token immediately following the flag, or NULL if the flag is absent.</return>
-    <api_param name="line" type="STRING">The full command-line string to search.</api_param>
-    <api_param name="flag" type="STRING">The flag name to locate (e.g. "--application-group").</api_param>
-    <RETURNS type="STRING"/>
-  </function>
-  <function order_name=".load_dispatcher_groups" name="load_dispatcher_groups" modifier="public">
-    <api_synopsis> Query the running fastcgidispatch process for its group file arguments.
- Reads --application-group and --service-group from the process command line
- via ps (Unix) or wmic (Windows), then loads the found files via parse_group_file().</api_synopsis>
-  </function>
-  <function order_name=".xcf_app_name" name="xcf_app_name" modifier="public">
-    <api_synopsis> Return the GAS application name derived from an XCF file path.
- Strips the directory component and the .xcf extension from the path.</api_synopsis>
-    <return>The base filename without the .xcf extension.</return>
-    <api_param name="path" type="STRING">Full or relative path to the XCF file.</api_param>
-    <RETURNS type="STRING"/>
-  </function>
-  <function order_name=".build_url" name="build_url" modifier="public">
-    <api_synopsis> Build the GAS browser URL for the application.
- URL format: protocol://host:port/genero/ua|ws/r/group/appname.
- "genero" is the Apache ProxyPass alias that forwards browser requests to the
- FastCGI dispatcher; it is not configurable from within GAS itself.
- The group is resolved by matching m_app.path against m_gas.groups, walking up
- the directory tree until a match is found or the path is exhausted.</api_synopsis>
-    <return>The fully composed GAS browser URL string.</return>
-    <api_param name="xcf_file" type="STRING">Path to the application XCF file (provides the app name).</api_param>
-    <api_param name="protocol" type="STRING">URL protocol: "http" or "https".</api_param>
-    <api_param name="host" type="STRING">Server hostname or IP address for the URL.</api_param>
-    <api_param name="port_override" type="STRING">Port to use; NULL to read the port from as.xcf.</api_param>
-    <RETURNS type="STRING"/>
+<api_class name="xcfinfo" package="xcfinfo" top="../" next="xcfinfo_lib">
+  <function order_name=".main" name="main" modifier="public">
+    <api_synopsis> xcfinfo — Genero Application Server configuration inspector.</api_synopsis>
+    <api_usage> Reads the GAS server configuration (as.xcf) and a Genero application XCF file
+ to compute and display the browser URL for launching the application through the
+ GAS dispatcher, and the DVM environment variable set that the execution component
+ will inject at runtime.</api_usage>
+    <api_usage> Usage:
+   fglrun xcfinfo &lt;app.xcf&gt; [options]</api_usage>
+    <api_usage> Required:
+   &lt;app.xcf&gt;           Path to the Genero application XCF file.</api_usage>
+    <api_usage> Options:
+   --url &lt;host&gt;        Override the hostname in the browser URL (default: localhost).</api_usage>
+    <api_usage>   --no-env            Suppress the environment variable output.</api_usage>
+    <api_usage>   --ua-groups &lt;file&gt;  Use this APPLICATION_GROUPS XML file to resolve the
+                       application group and URL path instead of querying the
+                       running dispatcher. Mutually exclusive with --ws-groups.</api_usage>
+    <api_usage>   --ws-groups &lt;file&gt;  Use this SERVICE_GROUPS XML file to resolve the
+                       service group and URL path instead of querying the
+                       running dispatcher. Mutually exclusive with --ua-groups.</api_usage>
+    <api_usage>   --as-config &lt;file&gt;  Use this file as the GAS server configuration instead
+                       of the default $FGLASDIR/etc/as.xcf. Useful when
+                       inspecting a non-active GAS installation or a staging
+                       configuration file.</api_usage>
+    <api_usage>   --http              Use http:// in the browser URL (default).
+   --https             Use https:// in the browser URL.</api_usage>
+    <api_usage>   --port &lt;port&gt;       Override the port in the browser URL (default: from as.xcf).</api_usage>
+    <api_usage>   --verbose           Print diagnostic information about each processing step.
+ Entry point: parse command-line arguments and delegate processing to xcfinfo_lib.run().</api_usage>
   </function>
 </api_class>

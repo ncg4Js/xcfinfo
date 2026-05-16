@@ -1,0 +1,76 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<api_class name="xcftypes" package="xcfinfo" top="../" prev="xcfinfo_lib">
+  <TYPE name="t_resource" modifier="public" type="RECORD">
+    <RECORD>
+      <member name="id" type="STRING"/>
+      <member name="source" type="STRING"/>
+      <member name="value" type="STRING"/>
+    </RECORD>
+    <api_synopsis> Type definitions shared by xcfinfo modules.</api_synopsis>
+    <api_usage> Defines the record structures and array types used to hold parsed GAS server
+ configuration (as.xcf) and Genero application XCF data.
+ t_resource — a single resource entry from the GAS RESOURCE_LIST.
+   id     — resource identifier (e.g. "res.ic.server.port")
+   source — origin type: INTERNAL, ENVIRON, UNX, or PLATFORM_INDEPENDENT
+   value  — resource value; may contain $(token) references resolved by expand_refs()</api_usage>
+  </TYPE>
+  <TYPE name="t_resource_list" modifier="public" type="DYNAMIC ARRAY OF RECORD" type_array="DYNAMIC ARRAY OF " type_name="t_resource">
+    <api_synopsis> t_resource_list — dynamic array of t_resource; holds all resources parsed from the RESOURCE_LIST in as.xcf.</api_synopsis>
+  </TYPE>
+  <TYPE name="t_env_var" modifier="public" type="RECORD">
+    <RECORD>
+      <member name="id" type="STRING"/>
+      <member name="value" type="STRING"/>
+      <member name="concat" type="STRING"/>
+    </RECORD>
+    <api_synopsis> t_env_var — a single environment variable entry from an EXECUTION component.
+   id     — environment variable name
+   value  — variable value; may contain $(token) references
+   concat — merge rule when app overrides GAS value: APPEND, PREPEND, or empty (replace)</api_synopsis>
+  </TYPE>
+  <TYPE name="t_env_var_list" modifier="public" type="DYNAMIC ARRAY OF RECORD" type_array="DYNAMIC ARRAY OF " type_name="t_env_var">
+    <api_synopsis> t_env_var_list — dynamic array of t_env_var; used for both GAS execution component and app-level env var lists.</api_synopsis>
+  </TYPE>
+  <TYPE name="t_group" modifier="public" type="RECORD">
+    <RECORD>
+      <member name="id" type="STRING"/>
+      <member name="path" type="STRING"/>
+      <member name="group_type" type="STRING"/>
+    </RECORD>
+    <api_synopsis> t_group — a group mapping entry from APPLICATION_LIST, SERVICE_LIST, or a group XML file.
+   id         — group identifier used in the browser URL path (e.g. "dev")
+   path       — filesystem directory the group maps to
+   group_type — routing type: "ua" for interactive applications, "ws" for web services</api_synopsis>
+  </TYPE>
+  <TYPE name="t_group_list" modifier="public" type="DYNAMIC ARRAY OF RECORD" type_array="DYNAMIC ARRAY OF " type_name="t_group">
+    <api_synopsis> t_group_list — dynamic array of t_group; accumulates all group mappings from all sources.</api_synopsis>
+  </TYPE>
+  <TYPE name="t_gas_config" modifier="public" type="RECORD">
+    <RECORD>
+      <member name="resources" type="xcftypes.t_resource_list" type_name="t_resource_list"/>
+      <member name="exec_env" type="xcftypes.t_env_var_list" type_name="t_env_var_list"/>
+      <member name="groups" type="xcftypes.t_group_list" type_name="t_group_list"/>
+      <member name="server_port" type="STRING"/>
+    </RECORD>
+    <api_synopsis> t_gas_config — complete parsed state of the GAS server configuration (as.xcf).
+   resources   — all resources parsed from the RESOURCE_LIST
+   exec_env    — env vars from the cpn.wa.execution.local execution component
+   groups      — group-to-path mappings from APPLICATION_LIST, SERVICE_LIST, and group XML files
+   server_port — TCP port the GAS dispatcher listens on (from TCP_SERVER_PORT)</api_synopsis>
+  </TYPE>
+  <TYPE name="t_app_config" modifier="public" type="RECORD">
+    <RECORD>
+      <member name="id" type="STRING"/>
+      <member name="parent" type="STRING"/>
+      <member name="path" type="STRING"/>
+      <member name="module" type="STRING"/>
+      <member name="env_vars" type="xcftypes.t_env_var_list" type_name="t_env_var_list"/>
+    </RECORD>
+    <api_synopsis> t_app_config — complete parsed state of a Genero application XCF file.
+   id       — application name derived from the XCF filename (without .xcf extension)
+   parent   — parent application identifier from the Parent XML attribute
+   path     — execution path from the PATH node in the EXECUTION section
+   module   — module name from the MODULE node in the EXECUTION section
+   env_vars — application-level env var overrides from the EXECUTION section</api_synopsis>
+  </TYPE>
+</api_class>
