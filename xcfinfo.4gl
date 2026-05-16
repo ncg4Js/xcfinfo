@@ -38,6 +38,8 @@
 --   --https             Use https:// in the browser URL.
 --
 --   --port <port>       Override the port in the browser URL (default: from as.xcf).
+--
+--   --verbose           Print diagnostic information about each processing step.
 
 IMPORT os
 IMPORT xml
@@ -45,8 +47,9 @@ IMPORT util
 IMPORT FGL xcftypes
 
 -- Module-level parsed state
-DEFINE m_gas t_gas_config
-DEFINE m_app t_app_config
+DEFINE m_gas     t_gas_config
+DEFINE m_app     t_app_config
+DEFINE m_verbose BOOLEAN
 
 -- ─── MAIN ────────────────────────────────────────────────────────────────────
 
@@ -108,6 +111,8 @@ MAIN
                 IF i <= num_args() THEN
                     LET l_port_override = arg_val(i)
                 END IF
+            WHEN "--verbose"
+                LET m_verbose = TRUE
             OTHERWISE
                 IF l_xcf_file IS NULL THEN
                     LET l_xcf_file = arg_val(i)
@@ -117,7 +122,7 @@ MAIN
     END WHILE
 
     IF l_xcf_file IS NULL THEN
-        DISPLAY "Usage: fglrun xcfinfo <app.xcf> [--no-env] [--ua-groups <file>|--ws-groups <file>] [--as-config <file>] [--http|--https] [--url <host>] [--port <port>]"
+        DISPLAY "Usage: fglrun xcfinfo <app.xcf> [--no-env] [--ua-groups <file>|--ws-groups <file>] [--as-config <file>] [--http|--https] [--url <host>] [--port <port>] [--verbose]"
         EXIT PROGRAM 1
     END IF
 
@@ -135,9 +140,21 @@ MAIN
 
     -- Load GAS server settings (resources, exec env vars, groups, port) from as.xcf.
     CALL parse_as_xcf(l_as_xcf)
+    IF m_verbose THEN
+        DISPLAY SFMT("[verbose] GAS resources loaded: %1", m_gas.resources.getLength())
+        DISPLAY SFMT("[verbose] GAS server port (raw): %1", m_gas.server_port)
+        DISPLAY SFMT("[verbose] GAS groups from as.xcf: %1", m_gas.groups.getLength())
+    END IF
 
     -- Load the application identity, execution path, module, and env overrides from the app XCF.
     CALL parse_app_xcf(l_xcf_file)
+    IF m_verbose THEN
+        DISPLAY SFMT("[verbose] App id: %1", m_app.id)
+        DISPLAY SFMT("[verbose] App parent: %1", m_app.parent)
+        DISPLAY SFMT("[verbose] App path (raw): %1", m_app.path)
+        DISPLAY SFMT("[verbose] App module: %1", m_app.module)
+        DISPLAY SFMT("[verbose] App env vars: %1", m_app.env_vars.getLength())
+    END IF
 
     -- Always query the running fastcgidispatch process for its group files first.
     CALL load_dispatcher_groups()
@@ -149,13 +166,16 @@ MAIN
             CALL parse_group_file(l_ws_groups, "ws")
         END IF
     END IF
+    IF m_verbose THEN
+        DISPLAY SFMT("[verbose] Total groups after all sources: %1", m_gas.groups.getLength())
+    END IF
 
     -- Expand all $(resource) tokens across resources, env vars, and group paths.
     CALL resolve_resources()
-
-# debug
-display util.JSON.format(util.JSON.stringify(m_gas.groups))
-# gubed
+    IF m_verbose THEN
+        DISPLAY SFMT("[verbose] App path (resolved): %1", m_app.path)
+        DISPLAY SFMT("[verbose] GAS server port (resolved): %1", m_gas.server_port)
+    END IF
 
     DISPLAY build_url(l_xcf_file, l_protocol, l_host, l_port_override)
 
@@ -552,6 +572,9 @@ FUNCTION parse_group_file(filename STRING, group_type STRING)
         END IF
     END IF
 
+    IF m_verbose THEN
+        DISPLAY SFMT("[verbose] Loading group file: %1 (type: %2)", filename, eff_type)
+    END IF
     LET child = root.getFirstChildElement()
     WHILE child IS NOT NULL
         IF child.getNodeName() == "GROUP" THEN
@@ -559,6 +582,9 @@ FUNCTION parse_group_file(filename STRING, group_type STRING)
             LET m_gas.groups[idx].id         = child.getAttribute("Id")
             LET m_gas.groups[idx].path       = get_text(child)
             LET m_gas.groups[idx].group_type = eff_type
+            IF m_verbose THEN
+                DISPLAY SFMT("[verbose]   group id=%1  path=%2", m_gas.groups[idx].id, m_gas.groups[idx].path)
+            END IF
         END IF
         LET child = child.getNextSiblingElement()
     END WHILE
@@ -617,6 +643,10 @@ FUNCTION load_dispatcher_groups()
     END WHILE
     CALL ch.close()
 
+    IF m_verbose THEN
+        DISPLAY SFMT("[verbose] Dispatcher application-group file: %1", app_grp)
+        DISPLAY SFMT("[verbose] Dispatcher service-group file: %1", svc_grp)
+    END IF
     IF app_grp IS NOT NULL THEN
         CALL parse_group_file(app_grp, "ua")
     END IF
@@ -661,13 +691,16 @@ FUNCTION build_url(xcf_file STRING, protocol STRING, host STRING, port_override 
     IF app_dir IS NULL OR app_dir.trim().getLength() == 0 THEN
         LET app_dir = os.Path.pwd()
     END IF
+    IF m_verbose THEN
+        DISPLAY SFMT("[verbose] App execution path for group matching: %1", app_dir)
+    END IF
     LET url_type = "ua"
     LET group_id = "_default"
     VAR search_dir STRING = app_dir
-    WHILE search_dir IS NOT NULL AND search_dir.getLength() > 1 
-# debug
-display SFMT("search dir=[%1], length=%2", search_dir, search_dir.getLength())
-# gubed
+    WHILE search_dir IS NOT NULL AND search_dir.getLength() > 1
+        IF m_verbose THEN
+            DISPLAY SFMT("[verbose] Searching groups for path: %1", search_dir)
+        END IF
         FOR i = 1 TO m_gas.groups.getLength()
             IF search_dir == m_gas.groups[i].path THEN
                 LET url_type = m_gas.groups[i].group_type
@@ -680,6 +713,10 @@ display SFMT("search dir=[%1], length=%2", search_dir, search_dir.getLength())
         END IF
         LET search_dir = os.Path.DirName(search_dir)
     END WHILE
+    IF m_verbose THEN
+        DISPLAY SFMT("[verbose] Group matched: id=%1  type=%2", group_id, url_type)
+        DISPLAY SFMT("[verbose] Port: %1", port)
+    END IF
 
     RETURN SFMT("%1://%2:%3/genero/%4/r/%5/%6", protocol, host, port, url_type, group_id, xcf_app_name(xcf_file))
 END FUNCTION
