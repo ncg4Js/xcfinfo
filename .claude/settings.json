@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(fglrun xcfinfo *)",
+      "Bash(fglcomp xcfinfo.4gl)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(fglcomp -I /home/genero/work/tests/ifx1 /tmp/xcftest.4gl)",
+      "Bash(fglrun /tmp/xcftest)",
+      "Read(//tmp/**)",
+      "Bash(fglcomp -I /home/genero/work/tests/ifx1 xcftest.4gl)",
+      "Bash(fglrun xcftest *)",
+      "Bash(grep -A5 \"s=\\\\[\\\\$\\\\\\(res.fgldir\\\\\\)\\\\] len=13\")",
+      "Bash(grep -n \"getIndexOf=.\\\\$\\( ps\")",
+      "Bash(grep \"sentinel.*\\\\[_\\\\$\\(res.fgldir\\)\\\\]\")",
+      "Bash(make run *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(echo \"exit:$?\")"
+    ]
+  }
+}
