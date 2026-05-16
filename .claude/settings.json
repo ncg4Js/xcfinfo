@@ -14,7 +14,9 @@
       "Bash(grep \"sentinel.*\\\\[_\\\\$\\(res.fgldir\\)\\\\]\")",
       "Bash(make run *)",
       "Bash(echo \"exit: $?\")",
-      "Bash(echo \"exit:$?\")"
+      "Bash(echo \"exit:$?\")",
+      "Bash(git -C /home/genero/work/tests/xcfInfo log --oneline)",
+      "Bash(grep -E \"^/[a-z]{3,12}$\")"
     ]
   }
 }

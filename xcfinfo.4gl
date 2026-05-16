@@ -17,12 +17,8 @@
 --   <app.xcf>           Path to the Genero application XCF file.
 --
 -- Options:
---   --url               Print the GAS browser URL for the application.
---                       (default: on)
---   --no-url            Suppress the browser URL output.
+--   --url <host>        Override the hostname in the browser URL (default: localhost).
 --
---   --env               Print the merged DVM environment variables.
---                       (default: on)
 --   --no-env            Suppress the environment variable output.
 --
 --   --ua-groups <file>  Use this APPLICATION_GROUPS XML file to resolve the
@@ -37,9 +33,15 @@
 --                       of the default $FGLASDIR/etc/as.xcf. Useful when
 --                       inspecting a non-active GAS installation or a staging
 --                       configuration file.
+--
+--   --http              Use http:// in the browser URL (default).
+--   --https             Use https:// in the browser URL.
+--
+--   --port <port>       Override the port in the browser URL (default: from as.xcf).
 
 IMPORT os
 IMPORT xml
+IMPORT util 
 IMPORT FGL xcftypes
 
 -- Module-level parsed state
@@ -49,18 +51,21 @@ DEFINE m_app t_app_config
 -- ─── MAIN ────────────────────────────────────────────────────────────────────
 
 MAIN
-    DEFINE l_xcf_file   STRING
-    DEFINE l_as_xcf     STRING
-    DEFINE l_ua_groups  STRING
-    DEFINE l_ws_groups  STRING
-    DEFINE l_as_config  STRING
-    DEFINE l_show_url   BOOLEAN
-    DEFINE l_show_env   BOOLEAN
-    DEFINE l_env        t_env_var_list
-    DEFINE i            INTEGER
+    DEFINE l_xcf_file       STRING
+    DEFINE l_as_xcf         STRING
+    DEFINE l_ua_groups      STRING
+    DEFINE l_ws_groups      STRING
+    DEFINE l_as_config      STRING
+    DEFINE l_show_env       BOOLEAN
+    DEFINE l_protocol       STRING
+    DEFINE l_host           STRING
+    DEFINE l_port_override  STRING
+    DEFINE l_env            t_env_var_list
+    DEFINE i                INTEGER
 
-    LET l_show_url = TRUE
     LET l_show_env = TRUE
+    LET l_protocol = "http"
+    LET l_host     = "localhost"
 
     # create same screen space
     DISPLAY "\n***xcfinfo"
@@ -69,11 +74,10 @@ MAIN
     WHILE i <= num_args()
         CASE arg_val(i)
             WHEN "--url"
-                LET l_show_url = TRUE
-            WHEN "--no-url"
-                LET l_show_url = FALSE
-            WHEN "--env"
-                LET l_show_env = TRUE
+                LET i = i + 1
+                IF i <= num_args() THEN
+                    LET l_host = arg_val(i)
+                END IF
             WHEN "--no-env"
                 LET l_show_env = FALSE
             WHEN "--ua-groups"
@@ -95,6 +99,15 @@ MAIN
                 IF i <= num_args() THEN
                     LET l_as_config = arg_val(i)
                 END IF
+            WHEN "--http"
+                LET l_protocol = "http"
+            WHEN "--https"
+                LET l_protocol = "https"
+            WHEN "--port"
+                LET i = i + 1
+                IF i <= num_args() THEN
+                    LET l_port_override = arg_val(i)
+                END IF
             OTHERWISE
                 IF l_xcf_file IS NULL THEN
                     LET l_xcf_file = arg_val(i)
@@ -104,7 +117,7 @@ MAIN
     END WHILE
 
     IF l_xcf_file IS NULL THEN
-        DISPLAY "Usage: fglrun xcfinfo <app.xcf> [--env|--no-env] [--url|--no-url] [--ua-groups <file>|--ws-groups <file>] [--as-config <file>]"
+        DISPLAY "Usage: fglrun xcfinfo <app.xcf> [--no-env] [--ua-groups <file>|--ws-groups <file>] [--as-config <file>] [--http|--https] [--url <host>] [--port <port>]"
         EXIT PROGRAM 1
     END IF
 
@@ -122,26 +135,29 @@ MAIN
 
     -- Load GAS server settings (resources, exec env vars, groups, port) from as.xcf.
     CALL parse_as_xcf(l_as_xcf)
+
     -- Load the application identity, execution path, module, and env overrides from the app XCF.
     CALL parse_app_xcf(l_xcf_file)
+
+    -- Always query the running fastcgidispatch process for its group files first.
+    CALL load_dispatcher_groups()
+    -- A caller-supplied file overrides the dispatcher result for its type.
     IF l_ua_groups IS NOT NULL THEN
-        -- Use the caller-supplied APPLICATION_GROUPS file to resolve group → URL path mappings.
         CALL parse_group_file(l_ua_groups, "ua")
     ELSE
         IF l_ws_groups IS NOT NULL THEN
-            -- Use the caller-supplied SERVICE_GROUPS file to resolve group → URL path mappings.
             CALL parse_group_file(l_ws_groups, "ws")
-        ELSE
-            -- No group file supplied: query the running fastcgidispatch process for its group files.
-            CALL load_dispatcher_groups()
         END IF
     END IF
+
     -- Expand all $(resource) tokens across resources, env vars, and group paths.
     CALL resolve_resources()
 
-    IF l_show_url THEN
-        DISPLAY build_url(l_xcf_file)
-    END IF
+# debug
+display util.JSON.format(util.JSON.stringify(m_gas.groups))
+# gubed
+
+    DISPLAY build_url(l_xcf_file, l_protocol, l_host, l_port_override)
 
     IF l_show_env THEN
         -- Merge GAS exec-component env vars with app-level overrides (APPEND/PREPEND rules applied).
@@ -277,20 +293,31 @@ FUNCTION parse_as_xcf(filename STRING)
         END WHILE
     END IF
 
-    -- APPLICATION_LIST: collect GROUP → path mappings for URL resolution
-    LET al_nd = find_child_elem(as_nd, "APPLICATION_LIST")
-    IF al_nd IS NOT NULL THEN
-        LET child = al_nd.getFirstChildElement()
-        WHILE child IS NOT NULL
-            IF child.getNodeName() == "GROUP" THEN
-                LET idx                          = m_gas.groups.getLength() + 1
-                LET m_gas.groups[idx].id         = child.getAttribute("Id")
-                LET m_gas.groups[idx].path       = get_text(child)
-                LET m_gas.groups[idx].group_type = "ua"
-            END IF
-            LET child = child.getNextSiblingElement()
-        END WHILE
-    END IF
+    -- APPLICATION_LIST then SERVICE_LIST: collect GROUP → path mappings for URL resolution
+    VAR pass INTEGER
+    FOR pass = 1 TO 2
+        IF pass == 1 THEN
+            LET al_nd = find_child_elem(as_nd, "APPLICATION_LIST")
+        ELSE
+            LET al_nd = find_child_elem(as_nd, "SERVICE_LIST")
+        END IF
+        IF al_nd IS NOT NULL THEN
+            LET child = al_nd.getFirstChildElement()
+            WHILE child IS NOT NULL
+                IF child.getNodeName() == "GROUP" THEN
+                    LET idx                          = m_gas.groups.getLength() + 1
+                    LET m_gas.groups[idx].id         = child.getAttribute("Id")
+                    LET m_gas.groups[idx].path       = get_text(child)
+                    IF pass == 1 THEN
+                        LET m_gas.groups[idx].group_type = "ua"
+                    ELSE
+                        LET m_gas.groups[idx].group_type = "ws"
+                    END IF
+                END IF
+                LET child = child.getNextSiblingElement()
+            END WHILE
+        END IF
+    END FOR
 
     -- INTERFACE_TO_CONNECTOR: TCP_SERVER_PORT
     LET ic_nd = find_child_elem(as_nd, "INTERFACE_TO_CONNECTOR")
@@ -413,7 +440,7 @@ FUNCTION expand_refs(s STRING) RETURNS STRING
     RETURN result
 END FUNCTION
 
--- Resolve all $(xxx) references across resources, env vars, and group paths.
+-- Resolve all $(xxx) references across resources, env vars, group paths, and app path.
 FUNCTION resolve_resources()
     DEFINE i    INTEGER
     DEFINE pass INTEGER
@@ -446,6 +473,7 @@ FUNCTION resolve_resources()
         LET m_gas.groups[i].path = expand_refs(m_gas.groups[i].path)
     END FOR
 
+    LET m_app.path        = expand_refs(m_app.path)
     LET m_gas.server_port = expand_refs(m_gas.server_port)
 
 END FUNCTION
@@ -610,32 +638,48 @@ FUNCTION xcf_app_name(path STRING) RETURNS STRING
 END FUNCTION
 
 -- Build the GAS browser URL for the application.
--- URL = http://localhost:<res.ic.server.port>/<ua|ws>/r/<group>/<appname>
--- Group and url-type come from the group XML files; port from as.xcf.
-FUNCTION build_url(xcf_file STRING) RETURNS STRING
+-- URL = <protocol>://<host>:<port>/genero/<ua|ws>/r/<group>/<appname>
+-- "genero" is the Apache alias that maps browser requests to the FastCGI dispatcher.
+-- Group and url-type come from the group XML files; port from as.xcf (or override).
+-- The group is matched against the PATH node in the app XCF (defaulting to cwd).
+FUNCTION build_url(xcf_file STRING, protocol STRING, host STRING, port_override STRING) RETURNS STRING
     DEFINE port      STRING
     DEFINE url_type  STRING
     DEFINE group_id  STRING
-    DEFINE xcf_dir   STRING
+    DEFINE app_dir   STRING
     DEFINE i         INTEGER
 
-    LET port = m_gas.server_port
-    IF port IS NULL THEN LET port = "6394" END IF
+    IF port_override IS NOT NULL THEN
+        LET port = port_override
+    ELSE
+        LET port = m_gas.server_port
+        IF port IS NULL THEN LET port = "6394" END IF
+    END IF
 
-    LET xcf_dir  = os.Path.DirName(xcf_file)
-    # if no path was given then the file is in the current folder
-    IF xcf_dir.trim().getLength() == 0 THEN
-        LET xcf_dir = os.Path.pwd()
-    END IF 
+    -- Use the PATH from the app XCF execution section; fall back to cwd if absent.
+    LET app_dir = m_app.path
+    IF app_dir IS NULL OR app_dir.trim().getLength() == 0 THEN
+        LET app_dir = os.Path.pwd()
+    END IF
     LET url_type = "ua"
     LET group_id = "_default"
-    FOR i = 1 TO m_gas.groups.getLength()
-        IF xcf_dir == m_gas.groups[i].path THEN
-            LET url_type = m_gas.groups[i].group_type
-            LET group_id = m_gas.groups[i].id
-            EXIT FOR
+    VAR search_dir STRING = app_dir
+    WHILE search_dir IS NOT NULL AND search_dir.getLength() > 1 
+# debug
+display SFMT("search dir=[%1], length=%2", search_dir, search_dir.getLength())
+# gubed
+        FOR i = 1 TO m_gas.groups.getLength()
+            IF search_dir == m_gas.groups[i].path THEN
+                LET url_type = m_gas.groups[i].group_type
+                LET group_id = m_gas.groups[i].id
+                EXIT FOR
+            END IF
+        END FOR
+        IF group_id != "_default" THEN
+            EXIT WHILE
         END IF
-    END FOR
+        LET search_dir = os.Path.DirName(search_dir)
+    END WHILE
 
-    RETURN "http://localhost:" || port || "/" || url_type || "/r/" || group_id || "/" || xcf_app_name(xcf_file)
+    RETURN SFMT("%1://%2:%3/genero/%4/r/%5/%6", protocol, host, port, url_type, group_id, xcf_app_name(xcf_file))
 END FUNCTION
