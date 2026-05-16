@@ -10,36 +10,44 @@
 --      will inject when it runs the application (merged from as.xcf and the
 --      app XCF, with APPEND/PREPEND concat rules applied).
 --
--- Usage:
---   fglrun xcfinfo <app.xcf> [options]
---
--- Required:
---   <app.xcf>           Path to the Genero application XCF file.
---
--- Options:
---   --url <host>        Override the hostname in the browser URL (default: localhost).
---
---   --no-env            Suppress the environment variable output.
---
---   --ua-groups <file>  Use this APPLICATION_GROUPS XML file to resolve the
---                       application group and URL path instead of querying the
---                       running dispatcher. Mutually exclusive with --ws-groups.
---
---   --ws-groups <file>  Use this SERVICE_GROUPS XML file to resolve the
---                       service group and URL path instead of querying the
---                       running dispatcher. Mutually exclusive with --ua-groups.
---
---   --as-config <file>  Use this file as the GAS server configuration instead
---                       of the default $FGLASDIR/etc/as.xcf. Useful when
---                       inspecting a non-active GAS installation or a staging
---                       configuration file.
---
---   --http              Use http:// in the browser URL (default).
---   --https             Use https:// in the browser URL.
---
---   --port <port>       Override the port in the browser URL (default: from as.xcf).
---
---   --verbose           Print diagnostic information about each processing step.
+
+#+ xcfinfo — Genero Application Server configuration inspector.
+#+
+#+ Reads the GAS server configuration (as.xcf) and a Genero application XCF file
+#+ to compute and display the browser URL for launching the application through the
+#+ GAS dispatcher, and the DVM environment variable set that the execution component
+#+ will inject at runtime.
+#+
+#+ Usage:
+#+   fglrun xcfinfo <app.xcf> [options]
+#+
+#+ Required:
+#+   <app.xcf>           Path to the Genero application XCF file.
+#+
+#+ Options:
+#+   --url <host>        Override the hostname in the browser URL (default: localhost).
+#+
+#+   --no-env            Suppress the environment variable output.
+#+
+#+   --ua-groups <file>  Use this APPLICATION_GROUPS XML file to resolve the
+#+                       application group and URL path instead of querying the
+#+                       running dispatcher. Mutually exclusive with --ws-groups.
+#+
+#+   --ws-groups <file>  Use this SERVICE_GROUPS XML file to resolve the
+#+                       service group and URL path instead of querying the
+#+                       running dispatcher. Mutually exclusive with --ua-groups.
+#+
+#+   --as-config <file>  Use this file as the GAS server configuration instead
+#+                       of the default $FGLASDIR/etc/as.xcf. Useful when
+#+                       inspecting a non-active GAS installation or a staging
+#+                       configuration file.
+#+
+#+   --http              Use http:// in the browser URL (default).
+#+   --https             Use https:// in the browser URL.
+#+
+#+   --port <port>       Override the port in the browser URL (default: from as.xcf).
+#+
+#+   --verbose           Print diagnostic information about each processing step.
 
 IMPORT os
 IMPORT xml
@@ -47,24 +55,27 @@ IMPORT util
 IMPORT FGL xcftypes
 
 -- Module-level parsed state
+#+ Parsed GAS server configuration: resources, exec env vars, group mappings, and TCP port.
 DEFINE m_gas     t_gas_config
+#+ Parsed application XCF configuration: identity, execution path, module, and env var overrides.
 DEFINE m_app     t_app_config
+#+ When TRUE, emit diagnostic messages about each processing step to standard output.
 DEFINE m_verbose BOOLEAN
 
 -- ─── MAIN ────────────────────────────────────────────────────────────────────
 
 MAIN
-    DEFINE l_xcf_file       STRING
-    DEFINE l_as_xcf         STRING
-    DEFINE l_ua_groups      STRING
-    DEFINE l_ws_groups      STRING
-    DEFINE l_as_config      STRING
-    DEFINE l_show_env       BOOLEAN
-    DEFINE l_protocol       STRING
-    DEFINE l_host           STRING
-    DEFINE l_port_override  STRING
-    DEFINE l_env            t_env_var_list
-    DEFINE i                INTEGER
+    DEFINE l_xcf_file       STRING          # required: path to the application XCF file
+    DEFINE l_as_xcf         STRING          # resolved path to as.xcf
+    DEFINE l_ua_groups      STRING          # --ua-groups override file
+    DEFINE l_ws_groups      STRING          # --ws-groups override file
+    DEFINE l_as_config      STRING          # --as-config override file
+    DEFINE l_show_env       BOOLEAN         # FALSE when --no-env is passed
+    DEFINE l_protocol       STRING          # "http" or "https"
+    DEFINE l_host           STRING          # URL hostname (--url)
+    DEFINE l_port_override  STRING          # URL port override (--port)
+    DEFINE l_env            t_env_var_list  # merged DVM environment variables
+    DEFINE i                INTEGER         # argument loop counter
 
     LET l_show_env = TRUE
     LET l_protocol = "http"
@@ -191,7 +202,10 @@ END MAIN
 
 -- ─── XML HELPERS ─────────────────────────────────────────────────────────────
 
--- Return the trimmed text content of an element node.
+#+ Return the trimmed text content of a DOM element node.
+#+
+#+ @param node  The DOM element node whose text content is wanted.
+#+ @return      The trimmed text, or an empty string if no TEXT_NODE child exists.
 FUNCTION get_text(node xml.DomNode) RETURNS STRING
     DEFINE child xml.DomNode
     LET child = node.getFirstChild()
@@ -204,7 +218,11 @@ FUNCTION get_text(node xml.DomNode) RETURNS STRING
     RETURN ""
 END FUNCTION
 
--- Return the first child element whose tag matches `tag`, or NULL.
+#+ Return the first child element node whose tag name matches tag, or NULL.
+#+
+#+ @param parent  The parent DOM node to search.
+#+ @param tag     The element tag name to match.
+#+ @return        The first matching child element, or NULL if none found.
 FUNCTION find_child_elem(parent xml.DomNode, tag STRING) RETURNS xml.DomNode
     DEFINE child xml.DomNode
     LET child = parent.getFirstChildElement()
@@ -219,7 +237,13 @@ END FUNCTION
 
 -- ─── RESOURCE MANAGEMENT ─────────────────────────────────────────────────────
 
--- Add or update a resource in m_gas.resources (UNX entries override PI ones).
+#+ Add or update a resource entry in m_gas.resources.
+#+ If an entry with the same id already exists it is updated in place; UNX-sourced
+#+ entries therefore override PLATFORM_INDEPENDENT entries when loaded second.
+#+
+#+ @param id      The resource identifier (e.g. "res.ic.server.port").
+#+ @param source  The source attribute value (INTERNAL, ENVIRON, UNX, etc.).
+#+ @param value   The resource value string, possibly containing $(token) references.
 FUNCTION upsert_resource(id STRING, source STRING, value STRING)
     DEFINE i INTEGER
     FOR i = 1 TO m_gas.resources.getLength()
@@ -235,7 +259,9 @@ FUNCTION upsert_resource(id STRING, source STRING, value STRING)
     LET m_gas.resources[i].value  = value
 END FUNCTION
 
--- Parse all <RESOURCE> children of `container` into m_gas.resources.
+#+ Parse all RESOURCE child elements of container and load them into m_gas.resources.
+#+
+#+ @param container  The parent DOM node (PLATFORM_INDEPENDENT or UNX section).
 FUNCTION parse_resource_nodes(container xml.DomNode)
     DEFINE child xml.DomNode
     LET child = container.getFirstChildElement()
@@ -250,7 +276,11 @@ FUNCTION parse_resource_nodes(container xml.DomNode)
     END WHILE
 END FUNCTION
 
--- Parse all <ENVIRONMENT_VARIABLE> children of `container` into `list` and return it.
+#+ Parse all ENVIRONMENT_VARIABLE child elements of container and append them to list.
+#+
+#+ @param container  The parent DOM node containing ENVIRONMENT_VARIABLE elements.
+#+ @param list       The t_env_var_list to append the parsed entries to.
+#+ @return           The updated list with all newly parsed entries appended.
 FUNCTION parse_env_nodes(container xml.DomNode, list t_env_var_list)
     RETURNS t_env_var_list
     DEFINE child xml.DomNode
@@ -270,7 +300,11 @@ END FUNCTION
 
 -- ─── PARSERS ─────────────────────────────────────────────────────────────────
 
--- Parse $FGLASDIR/etc/as.xcf into m_gas.
+#+ Parse the GAS server configuration file (as.xcf) into m_gas.
+#+ Loads resources (PLATFORM_INDEPENDENT then UNX), execution component env vars,
+#+ APPLICATION_LIST and SERVICE_LIST group-to-path mappings, and the TCP server port.
+#+
+#+ @param filename  Path to the as.xcf configuration file.
 FUNCTION parse_as_xcf(filename STRING)
     DEFINE doc   xml.DomDocument
     DEFINE root  xml.DomNode
@@ -350,7 +384,11 @@ FUNCTION parse_as_xcf(filename STRING)
 
 END FUNCTION
 
--- Parse the application XCF file into m_app.
+#+ Parse the Genero application XCF file into m_app.
+#+ Reads the application id, parent, execution path, module, and env var overrides.
+#+ Also registers application.path as a resource so $(application.path) can be expanded.
+#+
+#+ @param filename  Path to the application XCF file.
 FUNCTION parse_app_xcf(filename STRING)
     DEFINE doc     xml.DomDocument
     DEFINE root    xml.DomNode
@@ -387,7 +425,11 @@ END FUNCTION
 
 -- ─── RESOURCE RESOLUTION ─────────────────────────────────────────────────────
 
--- Return the resolved value for `id`: first from m_gas.resources, then from env.
+#+ Return the resolved value for a resource id.
+#+ Searches m_gas.resources first; falls back to fgl_getenv() if not found.
+#+
+#+ @param id    The resource identifier to look up.
+#+ @return      The resource value string, or the environment variable value if absent.
 FUNCTION find_resource_value(id STRING) RETURNS STRING
     DEFINE i INTEGER
     FOR i = 1 TO m_gas.resources.getLength()
@@ -398,9 +440,13 @@ FUNCTION find_resource_value(id STRING) RETURNS STRING
     RETURN fgl_getenv(id)
 END FUNCTION
 
--- Expand all $(name) tokens in `s` using m_gas.resources (max 50 substitutions).
--- In Genero BDL empty STRING == NULL; every concatenation branch explicitly
--- avoids combining NULL operands so NULL cannot propagate into the result.
+#+ Expand all $(name) resource-reference tokens in s (maximum 50 substitutions per call).
+#+ Each $(name) token is replaced by the value returned by find_resource_value().
+#+ Iterates to handle chained references; the 50-iteration limit prevents infinite
+#+ loops on circular resource definitions.
+#+
+#+ @param s     The string that may contain $(resource.name) tokens.
+#+ @return      The string with all resolvable tokens substituted by their values.
 FUNCTION expand_refs(s STRING) RETURNS STRING
     DEFINE result  STRING
     DEFINE search  STRING
@@ -460,7 +506,9 @@ FUNCTION expand_refs(s STRING) RETURNS STRING
     RETURN result
 END FUNCTION
 
--- Resolve all $(xxx) references across resources, env vars, group paths, and app path.
+#+ Resolve all $(resource) tokens across all parsed configuration data.
+#+ Applies 10-pass chain resolution to m_gas.resources, then expands tokens in
+#+ m_gas.exec_env, m_app.env_vars, m_gas.groups paths, m_app.path, and m_gas.server_port.
 FUNCTION resolve_resources()
     DEFINE i    INTEGER
     DEFINE pass INTEGER
@@ -500,7 +548,11 @@ END FUNCTION
 
 -- ─── ENV VAR COLLECTION ──────────────────────────────────────────────────────
 
--- Return the merged DVM environment: execution component vars + app overrides.
+#+ Return the merged DVM environment variable list ready for display.
+#+ Starts from the GAS execution component variables, then applies app-level overrides
+#+ using APPEND, PREPEND, or replace semantics according to each entry's Concat attribute.
+#+
+#+ @return  The merged t_env_var_list with all app-level overrides applied.
 FUNCTION collect_env_vars() RETURNS t_env_var_list
     DEFINE result t_env_var_list
     DEFINE i, j   INTEGER
@@ -540,8 +592,11 @@ END FUNCTION
 
 -- ─── URL CONSTRUCTION ────────────────────────────────────────────────────────
 
--- Parse an APPLICATION_GROUPS or SERVICE_GROUPS XML file and append to m_gas.groups.
--- Pass NULL for group_type to auto-detect from the root element name.
+#+ Parse an APPLICATION_GROUPS or SERVICE_GROUPS XML file and append entries to m_gas.groups.
+#+ Pass NULL for group_type to auto-detect the type from the root element name.
+#+
+#+ @param filename    Path to the groups XML file.
+#+ @param group_type  "ua" for APPLICATION_GROUPS, "ws" for SERVICE_GROUPS, NULL to auto-detect.
 FUNCTION parse_group_file(filename STRING, group_type STRING)
     DEFINE doc      xml.DomDocument
     DEFINE root     xml.DomNode
@@ -590,8 +645,12 @@ FUNCTION parse_group_file(filename STRING, group_type STRING)
     END WHILE
 END FUNCTION
 
--- Return the value of a named command-line flag from a line of text.
--- Uses the sentinel trick (prepend "_") so flags at position 1 are not missed.
+#+ Return the value of a named command-line flag from a process command-line string.
+#+ Uses a sentinel prefix so that flags appearing at position 1 of the string are found.
+#+
+#+ @param line  The full command-line string to search.
+#+ @param flag  The flag name to locate (e.g. "--application-group").
+#+ @return      The token immediately following the flag, or NULL if the flag is absent.
 FUNCTION extract_flag_value(line STRING, flag STRING) RETURNS STRING
     DEFINE sentinel  STRING
     DEFINE pos       INTEGER
@@ -616,8 +675,9 @@ FUNCTION extract_flag_value(line STRING, flag STRING) RETURNS STRING
     END IF
 END FUNCTION
 
--- Query the running fastcgidispatch process for its --application-group and
--- --service-group arguments, then load the referenced group XML files.
+#+ Query the running fastcgidispatch process for its group file arguments.
+#+ Reads --application-group and --service-group from the process command line
+#+ via ps (Unix) or wmic (Windows), then loads the found files via parse_group_file().
 FUNCTION load_dispatcher_groups()
     DEFINE ch      base.Channel
     DEFINE line    STRING
@@ -655,7 +715,11 @@ FUNCTION load_dispatcher_groups()
     END IF
 END FUNCTION
 
--- Return the XCF filename without its extension (the GAS application name).
+#+ Return the GAS application name derived from an XCF file path.
+#+ Strips the directory component and the .xcf extension from the path.
+#+
+#+ @param path  Full or relative path to the XCF file.
+#+ @return      The base filename without the .xcf extension.
 FUNCTION xcf_app_name(path STRING) RETURNS STRING
     DEFINE base STRING
     DEFINE ext  STRING
@@ -667,11 +731,18 @@ FUNCTION xcf_app_name(path STRING) RETURNS STRING
     RETURN base
 END FUNCTION
 
--- Build the GAS browser URL for the application.
--- URL = <protocol>://<host>:<port>/genero/<ua|ws>/r/<group>/<appname>
--- "genero" is the Apache alias that maps browser requests to the FastCGI dispatcher.
--- Group and url-type come from the group XML files; port from as.xcf (or override).
--- The group is matched against the PATH node in the app XCF (defaulting to cwd).
+#+ Build the GAS browser URL for the application.
+#+ URL format: protocol://host:port/genero/ua|ws/r/group/appname.
+#+ "genero" is the Apache ProxyPass alias that forwards browser requests to the
+#+ FastCGI dispatcher; it is not configurable from within GAS itself.
+#+ The group is resolved by matching m_app.path against m_gas.groups, walking up
+#+ the directory tree until a match is found or the path is exhausted.
+#+
+#+ @param xcf_file       Path to the application XCF file (provides the app name).
+#+ @param protocol       URL protocol: "http" or "https".
+#+ @param host           Server hostname or IP address for the URL.
+#+ @param port_override  Port to use; NULL to read the port from as.xcf.
+#+ @return               The fully composed GAS browser URL string.
 FUNCTION build_url(xcf_file STRING, protocol STRING, host STRING, port_override STRING) RETURNS STRING
     DEFINE port      STRING
     DEFINE url_type  STRING
